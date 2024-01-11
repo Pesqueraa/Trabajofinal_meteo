@@ -1,2 +1,92 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+import PySimpleGUI as sg
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+import requests
+from io import BytesIO
+
+def obtener_clima(ciudades):
+    api_key = "tu_clave_api_openweathermap"  # Reemplaza con tu clave API de OpenWeatherMap
+    datos_clima = []
+
+    for ciudad, pais in ciudades.items():
+        base_url = "http://api.openweathermap.org/data/2.5/weather"
+        params = {
+            'q': f"{ciudad},{pais}",
+            'appid': api_key,
+            'units': 'metric'  # Puedes cambiar a 'imperial' para Fahrenheit
+        }
+
+        try:
+            response = requests.get(base_url, params=params)
+            data = response.json()
+
+            # Agregar datos a la lista
+            datos_clima.append({
+                'Ciudad': f"{ciudad}, {pais}",
+                'Temperatura (°C)': data['main']['temp'],
+                'Condición': data['weather'][0]['description']
+            })
+
+        except Exception as e:
+            print(f"Error al obtener datos para {ciudad}, {pais}: {str(e)}")
+
+    return datos_clima
+
+def visualizar_datos(datos):
+    df = pd.DataFrame(datos)
+    
+    # Crear gráfico de barras de temperatura
+    plt.bar(df['Ciudad'], df['Temperatura (°C)'], color='blue')
+    plt.xlabel('Ciudad')
+    plt.ylabel('Temperatura (°C)')
+    plt.title('Temperatura Actual en Ciudades')
+    plt.xticks(rotation=45, ha='right')
+
+    # Mostrar el gráfico
+    plt.tight_layout()
+    plt.show()
+
+def guardar_datos_en_csv(datos, nombre_archivo='datos_clima.csv'):
+    df = pd.DataFrame(datos)
+    df.to_csv(nombre_archivo, index=False)
+    print(f"Datos guardados en {nombre_archivo}")
+
+def main():
+    ciudades_a_monitorizar = {
+        'Madrid': 'Spain',
+        'Berlin': 'Germany',
+        'Brasilia': 'Brazil',
+        'Washington': 'USA',
+        'Moscow': 'Russia',
+        'Oslo': 'Norway',
+        'Beijing': 'China',
+        'Tokyo': 'Japan'
+    }
+
+    # Obtener datos meteorológicos
+    datos_clima = obtener_clima(ciudades_a_monitorizar)
+
+    # Visualizar datos en una ventana PySimpleGUI
+    layout = [
+        [sg.Table(values=datos_clima, headings=df.columns.tolist(), auto_size_columns=False, justification='right')],
+        [sg.Button('Visualizar Gráfico'), sg.Button('Guardar en CSV'), sg.Button('Salir')]
+    ]
+
+    window = sg.Window('Estudio Meteorológico', layout)
+
+    while True:
+        event, values = window.read()
+
+        if event == sg.WINDOW_CLOSED or event == 'Salir':
+            break
+        elif event == 'Visualizar Gráfico':
+            visualizar_datos(datos_clima)
+        elif event == 'Guardar en CSV':
+            guardar_datos_en_csv(datos_clima)
+
+    window.close()
+
+if __name__ == "__main__":
+    main()
+
